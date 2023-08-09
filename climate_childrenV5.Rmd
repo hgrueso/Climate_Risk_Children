@@ -401,7 +401,7 @@ num_approx_matches <- nrow(dhs_flood)
 print(dhs_flood)
 ```
 
-J.4 Descriptive Statistics
+J.4A Descriptive Statistics
 ```{r}
 library(stargazer)
 library(dplyr)
@@ -436,16 +436,46 @@ obs_df_u <- sapply(flood_no, function(x) sum(!is.na(x)))
 
 stargazer(as.data.frame(flood_yes), 
           type = "text", 
-          title="Descriptive Stats", 
+          title="Flooding Area (KDE, 1X1): Yes", 
           digits=2, 
           out="desc_stats_flood_yes.txt")
 
 stargazer(as.data.frame(flood_no), 
           type = "text", 
-          title="Descriptive Stats", 
+          title="Flooding Area (KDE, 1X1): No", 
           digits=2, 
           out="desc_stats_flood_no.txt")
 
+```
+
+J.4B Descriptive Statistics
+```{r}
+# Compute descriptive stats
+# Calculate the number of observations
+n_obs_flood_yes <- nrow(flood_yes)
+n_obs_flood_no <- nrow(flood_no)
+
+# Make a vector of the number of observations for each variable (all the same for each group)
+n_obs_flood_yes_vec <- rep(n_obs_flood_yes, ncol(flood_yes))
+n_obs_flood_no_vec <- rep(n_obs_flood_no, ncol(flood_no))
+
+# Combine the means, standard deviations, p-values, and number of observations
+summary_table <- data.frame(
+  Variable = colnames(flood_yes),
+  Mean_Flood_Yes = mean_df_r,
+  SD_Flood_Yes = sd_df_r,
+  Mean_Flood_No = mean_df_u,
+  SD_Flood_No = sd_df_u,
+  N_Obs_Flood_Yes = n_obs_flood_yes_vec,
+  N_Obs_Flood_No = n_obs_flood_no_vec,
+  P_Value = pvalues
+)
+
+# Print the summary table to the console
+print(summary_table)
+
+# Save the summary table to a CSV file
+write.csv(summary_table, "summary_statistics.csv")
 ```
 
 J.5 Regression Analysis
@@ -454,7 +484,109 @@ J.5 Regression Analysis
 library(stargazer)
 library(broom)
 
-# Perform the logistic regression analysis with fixed effects and covariates
+# A. Perform the logistic regression on severe poverty
+logit_m1 <- glm(deprived_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_m2 <- glm(deprived_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_e1 <- glm(dep_education_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_e2 <- glm(dep_education_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_he1 <- glm(dep_health_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_he2 <- glm(dep_health_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_ho1 <- glm(dep_housing_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_ho2 <- glm(dep_housing_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_n1 <- glm(dep_nutrition_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_n2 <- glm(dep_nutrition_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_s1 <- glm(dep_sanitation_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_s2 <- glm(dep_sanitation_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_w1 <- glm(dep_water_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_w2 <- glm(dep_water_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+# Generate the table for the multidimentionally poor
+stargazer(logit_m1, logit_m2, 
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Severely Deprived (Poor)",
+          out="logit_floods_poor.txt",
+          apply.coef=exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the education deprivation models
+stargazer(logit_e1, logit_e2, 
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Education Deprivation",
+          out="logit_floods_education.txt",
+          apply.coef=exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the health deprivation models
+stargazer(logit_he1, logit_he2,
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Health Deprivation",
+          out="logit_floods_health.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the housing deprivation models
+stargazer(logit_ho1, logit_ho2, 
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Housing Deprivation",
+          out="logit_floods_housing.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the nutrition deprivation models
+stargazer(logit_n1, logit_n2, 
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Nutrition Deprivation",
+          out="logit_floods_nutrition.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the sanitation deprivation models
+stargazer(logit_s1, logit_s2, 
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Sanitation Deprivation",
+          out="logit_floods_sanitation.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the water deprivation models
+stargazer(logit_w1, logit_w2, 
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Water Deprivation",
+          out="logit_floods_water.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# B. Perform the logistic regression on moderate poverty
+logit_m1 <- glm(deprived_mod ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_m2 <- glm(deprived_mod ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
 logit_e1 <- glm(dep_education_mod ~ flood_kde_1, data = dhs_flood, family = binomial)
 logit_e2 <- glm(dep_education_mod ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
 
@@ -473,57 +605,80 @@ logit_s2 <- glm(dep_sanitation_mod ~ flood_kde_1 + age + rural + female + wealth
 logit_w1 <- glm(dep_water_mod ~ flood_kde_1, data = dhs_flood, family = binomial)
 logit_w2 <- glm(dep_water_mod ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
 
-# Generate the table for the education deprivation models
-stargazer(logit_e1, logit_e2, 
-          title="Logistic Regression Results - Education Deprivation", 
+# Generate the table for the multidimentionally poor
+stargazer(logit_m1, logit_m2, 
+          title="Logistic Regression - Moderate Poverty", 
           align=TRUE,
           covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
-          dep.var.labels.include=FALSE,
-          out="logit_floods_education.txt",
-          apply.coef = exp)
+          dep.var.labels="Severely Deprived (Poor)",
+          out="logit_floods_poor_mod.txt",
+          apply.coef=exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the education deprivation models
+stargazer(logit_e1, logit_e2, 
+          title="Logistic Regression - Moderate Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Education Deprivation",
+          out="logit_floods_education_mod.txt",
+          apply.coef=exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
 
 # Generate the table for the health deprivation models
 stargazer(logit_he1, logit_he2,
-          title="Logistic Regression Results - Health Deprivation", 
+          title="Logistic Regression - Moderate Poverty", 
           align=TRUE,
           covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
-          dep.var.labels.include=FALSE,
-          out="logit_floods_health.txt",
-          apply.coef = exp)
+          dep.var.labels="Health Deprivation",
+          out="logit_floods_health_mod.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
 
 # Generate the table for the housing deprivation models
 stargazer(logit_ho1, logit_ho2, 
-          title="Logistic Regression Results - Housing Deprivation", 
+          title="Logistic Regression - Moderate Poverty", 
           align=TRUE,
           covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
-          dep.var.labels.include=FALSE,
-          out="logit_floods_housing.txt",
-          apply.coef = exp)
+          dep.var.labels="Housing Deprivation",
+          out="logit_floods_housing_mod.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
 
 # Generate the table for the nutrition deprivation models
 stargazer(logit_n1, logit_n2, 
-          title="Logistic Regression Results - Nutrition Deprivation", 
+          title="Logistic Regression - Moderate Poverty", 
           align=TRUE,
           covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
-          dep.var.labels.include=FALSE,
-          out="logit_floods_nutrition.txt",
-          apply.coef = exp)
+          dep.var.labels="Nutrition Deprivation",
+          out="logit_floods_nutrition_mod.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
 
 # Generate the table for the sanitation deprivation models
 stargazer(logit_s1, logit_s2, 
-          title="Logistic Regression Results - Sanitation Deprivation", 
+          title="Logistic Regression - Moderate Poverty", 
           align=TRUE,
           covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
-          dep.var.labels.include=FALSE,
-          out="logit_floods_sanitation.txt",
-          apply.coef = exp)
+          dep.var.labels="Sanitation Deprivation",
+          out="logit_floods_sanitation_mod.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
 
 # Generate the table for the water deprivation models
 stargazer(logit_w1, logit_w2, 
-          title="Logistic Regression Results - Water Deprivation", 
+          title="Logistic Regression - Moderate Poverty", 
           align=TRUE,
           covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
-          dep.var.labels.include=FALSE,
-          out="logit_floods_water.txt",
-          apply.coef = exp)
+          dep.var.labels="Water Deprivation",
+          out="logit_floods_water_mod.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
 ```
