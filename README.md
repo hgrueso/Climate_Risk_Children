@@ -9,3 +9,6 @@ Data files: Microdata_DHS_Apr2023, dhsgps_combined_sep22.csv, only the flooding 
 3) Add other DHS years
 4) Explore a diff-in-diff design to compare differences in multidimensional poverty outcomes before and after the flooding and between those who were affected and those who didn't
 5) Add LSMS data and study the effect of receiving cash transfers among those affected by flooding. Only select individuals affected by the flood and compare differences between those who got the cash transfers and those who didn't/
+
+# Code Outputs:
+![image](https://github.com/hgrueso/Climate_Risk_Children/assets/51755133/6861a364-af70-4771-acb7-1668a8e6a33b)
