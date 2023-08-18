@@ -1,0 +1,824 @@
+---
+Title: "Studying the relationship betwen climate change and children's wellbeing"
+Author: Hernando Grueso
+Output: climate_children
+---
+
+Creation: 09/05/2023
+Update: 18/08/2023
+Data Sources: 
+1) Flood maps from Nigeria: https://global-flood-database.cloudtostreet.ai/
+2) DHS:
+3) VACS:
+4) MICS:
+
+A. Install Required Packages
+```{r}
+# Install Required Packages
+if(!requireNamespace("raster")) install.packages( "raster" )
+if(!requireNamespace("MASS")) install.packages( "MASS" )
+if(!requireNamespace("rgdal")) install.packages( "rgdal" )
+if(!requireNamespace("spatstat")) install.packages( "spatstat" )
+if(!requireNamespace("sp")) install.packages( "sp" )
+if(!requireNamespace("rnaturalearth")) install.packages( "rnaturalearth" )
+if(!requireNamespace("rnaturalearthdata")) install.packages( "rnaturalearthdata" )
+if(!requireNamespace("dplyr")) install.packages( "dplyr" )
+if(!requireNamespace("sf")) install.packages( "sf" )
+if(!requireNamespace("RColorBrewer")) install.packages( "RColorBrewer" )
+if(!requireNamespace("leaflet")) install.packages( "leaflet" )
+if(!requireNamespace("htmlwidgets")) install.packages( "htmlwidgets" )
+if(!requireNamespace("ggplot2")) install.packages( "ggplot2" )
+if(!requireNamespace("stargazer")) install.packages( "stargazer" )
+if(!requireNamespace("Matching")) install.packages( "Matching" )
+if(!requireNamespace("rgenoud")) install.packages( "rgenoud" )
+if(!requireNamespace("writexl")) install.packages( "writexl" )
+
+```
+
+B. Define Directory
+```{r}
+# Defining Directory:
+groupDir <- "C:/Users/hgruesohurtado/Desktop/Climate Change"
+
+```
+
+C. Import Data
+```{r}
+# Import GeoTiff file
+library(raster)
+raster_layer <- raster("Floods/2018/DFO_4667_From_20180820_to_20181002.tif") 
+#raster_layer_16 <- raster("Floods/2016/DFO_4391_From_20160914_to_20160922.tif") 
+#raster_layer_15 <- raster("Floods/2015/DFO_4294_From_20150830_to_20150911.tif") 
+
+# Convert to a dataframe
+raster_layer <- stack(raster_layer)
+df <- as.data.frame(raster_layer, xy = TRUE)
+
+# Import DHS geo-codes
+library(readr)
+dhs <- read_csv("Save the Children/Child poverty and climate/dhsgps_combined_sep22.csv", show_col_types = FALSE)
+dhs <- subset(dhs, dhs$DHSYEAR==2018)
+
+# Import DHS data 2018
+dhs_df <- read_csv("Save the Children/Child poverty and climate/Microdata_DHS_Apr2023.csv", show_col_types = FALSE)
+dhs_df <- subset(dhs_df, dhs_df$year_interview==2018)
+```
+
+D. Merge DHS MPI & GEO-Codes
+```{r}
+# Only keep Nigeria in DHS
+dhs <- subset(dhs, dhs$DHSCC=="NG")
+dhs_df <- subset(dhs_df, dhs_df$countrycode=="NGA")
+
+# Merge at the cluster level (geo-codes are defined at the cluster level)
+dhs_df <- merge(dhs_df, dhs, by = "cluster")
+
+# Delete data frames that will not be used
+rm(df)
+```
+
+E. Plot Nigeria flooding map
+```{r}
+# Plot the raster map with custom settings
+plot(raster_layer,
+     main = "Foold Map: Nigeria, 2018",
+     legend = TRUE,
+     legend.args = list(text = "Flooding"))
+```
+
+F.1 Plot Severe MPI=1 DHS households on flooding map  
+```{r}
+# Plot the raster layer
+plot(raster_layer,
+     main = "Flood Map: Nigeria, 2018 (Child Deprived: Severe)",
+     legend = TRUE,
+     legend.args = list(text = "Flooding"))
+
+# Create subset of severe poor households
+dhs_poor_sev <- subset(dhs_df, dhs_df$deprived_sev==1)
+  
+# Add DHS data points to the plot
+points(dhs_poor_sev$LONGNUM, dhs_poor_sev$LATNUM, col = "blue", pch = 20)
+```
+
+F.2 Plot Moderate MPI=0 DHS households on flooding map  
+```{r}
+# Plot the raster layer
+plot(raster_layer,
+     main = "Flood Map: Nigeria, 2018 (Child Non-Deprived: Moderate)",
+     legend = TRUE,
+     legend.args = list(text = "Flooding"))
+
+# Create subset of moderately poor households
+dhs_poor_mod <- subset(dhs_df, dhs_df$deprived_mod==0)
+  
+# Add DHS data points to the plot
+points(dhs_poor_mod$LONGNUM, dhs_poor_mod$LATNUM, col = "purple", pch = 20)
+
+```
+
+G.1 Plot Severe MPI=0 DHS households on flooding map  
+```{r}
+# Plot the raster layer
+plot(raster_layer,
+     main = "Flood Map: Nigeria, 2018 (Child Non-Deprived: Severe)",
+     legend = TRUE,
+     legend.args = list(text = "Flooding"))
+
+# Create subset of severe poor households
+dhs_poor_sev <- subset(dhs_df, dhs_df$deprived_sev==0)
+  
+# Add DHS data points to the plot
+points(dhs_poor_sev$LONGNUM, dhs_poor_sev$LATNUM, col = "blue", pch = 20)
+
+```
+
+G.2 Plot Flooding Map & DHS Households Deprived on: Housing (moderate)  
+```{r}
+# Plot the raster layer
+plot(raster_layer,
+     main = "Flood Map: Nigeria, 2018 (Housing Deprivation: Moderate)",
+     legend = TRUE,
+     legend.args = list(text = "Flooding"))
+
+# Create subset of moderately poor households
+dhs_poor_mod <- subset(dhs_df, dhs_df$dep_housing_mod==1)
+  
+# Add DHS data points to the plot
+points(dhs_poor_mod$LONGNUM, dhs_poor_mod$LATNUM, col = "orange", pch = 20)
+
+```
+
+H.1 Plot Flooding Map & DHS Households Deprived on: Water
+```{r}
+# Plot the raster layer
+plot(raster_layer,
+     main = "Flood Map: Nigeria, 2018 (Water Deprivation: Moderate)",
+     legend = TRUE,
+     legend.args = list(text = "Flooding"))
+
+# Create subset of moderately poor households
+dhs_poor_mod <- subset(dhs_df, dhs_df$dep_water_mod==1)
+  
+# Add DHS data points to the plot
+points(dhs_poor_mod$LONGNUM, dhs_poor_mod$LATNUM, col = "blue", pch = 20)
+
+```
+
+H.2 Plot Flooding Map & DHS Households Deprived on: Sanitation
+```{r}
+# Plot the raster layer
+plot(raster_layer,
+     main = "Flood Map: Nigeria, 2018 (Sanitation Deprivation: Moderate)",
+     legend = TRUE,
+     legend.args = list(text = "Flooding"))
+
+# Create subset of moderately poor households
+dhs_poor_mod <- subset(dhs_df, dhs_df$dep_sanitation_mod==1)
+  
+# Add DHS data points to the plot
+points(dhs_poor_mod$LONGNUM, dhs_poor_mod$LATNUM, col = "red", pch = 20)
+
+```
+
+H.3 Plot Flooding Map & DHS Households Deprived on: Nutrition
+```{r}
+# Plot the raster layer
+plot(raster_layer,
+     main = "Flood Map: Nigeria, 2018 (Nutrition Deprivation: Moderate)",
+     legend = TRUE,
+     legend.args = list(text = "Flooding"))
+
+# Create subset of moderately poor households
+dhs_poor_mod <- subset(dhs_df, dhs_df$dep_nutrition_mod==1)
+  
+# Add DHS data points to the plot
+points(dhs_poor_mod$LONGNUM, dhs_poor_mod$LATNUM, col = "purple", pch = 20)
+
+```
+
+H.4 Plot Flooding Map & DHS Households Deprived on: Health
+```{r}
+# Plot the raster layer
+plot(raster_layer,
+     main = "Flood Map: Nigeria, 2018 (Health Deprivation: Moderate)",
+     legend = TRUE,
+     legend.args = list(text = "Flooding"))
+
+# Create subset of moderately poor households
+dhs_poor_mod <- subset(dhs_df, dhs_df$dep_health_mod==1)
+  
+# Add DHS data points to the plot
+points(dhs_poor_mod$LONGNUM, dhs_poor_mod$LATNUM, col = "orange", pch = 20)
+
+```
+
+H.6 Plot Flooding Map & DHS Households Deprived on: Education
+```{r}
+# Plot the raster layer
+plot(raster_layer,
+     main = "Flood Map: Nigeria, 2018 (Education Deprivation: Moderate)",
+     legend = TRUE,
+     legend.args = list(text = "Flooding"))
+
+# Create subset of moderately poor households
+dhs_poor_mod <- subset(dhs_df, dhs_df$dep_education_mod==1)
+  
+# Add DHS data points to the plot
+points(dhs_poor_mod$LONGNUM, dhs_poor_mod$LATNUM, col = "yellow", pch = 20)
+
+```
+
+I.1 Map of Poverty Severity at the Cluster Level
+```{r}
+library(raster)
+library(ggplot2)
+library(scales)
+library(RColorBrewer)
+
+# Define desired extent values (adjust as needed)
+min_longitude <- 0
+max_longitude <- 17
+min_latitude <- 0
+max_latitude <- 17
+
+# Plot the raster data with a lighter color palette
+color_blend_func <- colorRampPalette(colors = c("green", brewer.pal(9, "RdYlBu")))
+plot(raster_layer, col = color_blend_func(256), axes = TRUE, main = 'Flood Map: Nigeria, 2018 with Cluster Poverty Severity', xlim=c(min_longitude, max_longitude), ylim=c(min_latitude, max_latitude), asp=1)
+
+# Create a color palette for the points
+color_func <- colorRampPalette(colors = c("red", "red"))
+color_indices <- round(dhs_df$deprived_sev * 100)
+color_indices[color_indices > 100] <- 100
+color_indices[color_indices < 1] <- 1
+colors <- alpha(color_func(100)[color_indices], 0.7)
+
+# Add the clusters' locations to the plot with small size and red color
+points(dhs_df$LONGNUM, dhs_df$LATNUM, col = colors, pch = 20, cex = 0.5)
+
+```
+
+I.2 Geo-Spatial Distribution of Poverty
+```{r}
+library(tidyverse)
+
+# Collapse poverty insidence at the cluster level
+dhs_cluster <- dhs_df %>%
+  filter(LATNUM != 0 & LONGNUM != 0) %>%
+  group_by(cluster) %>%
+  summarize(avg_deprived_sev = mean(deprived_sev),
+            LATNUM = first(LATNUM),
+            LONGNUM = first(LONGNUM))
+
+# Plot the data
+library(ggplot2)
+ggplot(dhs_cluster, aes(x = LONGNUM, y = LATNUM)) +
+  geom_point(aes(color = avg_deprived_sev)) +
+  scale_color_gradient(low = "yellow", high = "red") +
+  labs(title = "Geo-Spatial Distribution of Poverty",
+       x = "Longitude", 
+       y = "Latitude",
+       color = "Average Deprivation Level") +
+  theme_minimal()
+```
+
+I.3 Geo-Spatial Distribution of Wealth
+```{r}
+# Collapse poverty incidence at the cluster level
+dhs_cluster <- dhs_df %>%
+  filter(LATNUM != 0 & LONGNUM != 0) %>%
+  group_by(cluster) %>%
+  summarize(wealth = mean(wealth),
+            LATNUM = first(LATNUM),
+            LONGNUM = first(LONGNUM))
+
+# Load the necessary library
+library(ggplot2)
+
+# Check the data
+head(dhs_cluster)
+
+# Plot the data
+ggplot(dhs_cluster, aes(x = LONGNUM, y = LATNUM)) +
+  geom_point(aes(color = wealth)) +
+  scale_color_gradient(low = "red", high = "yellow") +
+  labs(title = "Geo-Spatial Distribution of Wealth",
+       x = "Longitude", 
+       y = "Latitude",
+       color = "Average Wealth Level") +
+  theme_minimal()
+```
+
+J.1 Kernel Density Estimate
+```{r}
+# Convert the raster to points
+points <- rasterToPoints(raster_layer)
+
+# Perform kernel density estimation
+kde <- density(points)
+
+# Plot the kernel density estimate
+plot(kde)
+
+```
+
+J.2 Calculate KDE 1x1 and 11x11
+```{r}
+library(raster)
+library(RColorBrewer)
+library(sp)
+library(lattice)
+library(grid)
+
+# Convert the raster to a binary mask
+flooded_mask <- raster_layer > 0
+
+# Calculate density with 1x1 bandwidth
+bandwidth1 <- matrix(3, nrow = 7, ncol = 7)
+density1 <- focal(flooded_mask, w = bandwidth1, fun = sum)
+
+# Calculate density with 17x17 bandwidth
+bandwidth11 <- matrix(3, nrow = 21, ncol = 21)
+density11 <- focal(flooded_mask, w = bandwidth11, fun = sum)
+
+# Identify the raster with fewer non-NA values
+if (sum(!is.na(density1[])) < sum(!is.na(density11[]))) {
+  mask_raster <- density1
+} else {
+  mask_raster <- density11
+}
+
+# Use the mask_raster to mask both density rasters
+density1_aligned <- mask(density1, mask_raster)
+density11_aligned <- mask(density11, mask_raster)
+
+# Combine the two density rasters into a multilayer raster
+density_stack <- stack(density1_aligned, density11_aligned)
+
+# Create a custom multi-color palette
+my_palette <- colorRampPalette(c(brewer.pal(3, "Blues"), brewer.pal(3, "Greens"), brewer.pal(3, "Reds")))
+
+# Create a custom plot function using levelplot (from the lattice package)
+# Plot the two density rasters with the custom color palette
+spplot_obj <- spplot(density_stack, names.attr = c("Bandwidth 7x7", "Bandwidth 21x21"), col.regions = my_palette(100))
+
+# Convert the rasters to points (data frames)
+density1_points <- rasterToPoints(density1_aligned)
+density11_points <- rasterToPoints(density11_aligned)
+
+# Combine into one data frame
+df_flood18 <- data.frame(
+  Longitude = density1_points[,1],
+  Latitude = density1_points[,2],
+  Density1 = density1_points[,3],
+  Density11 = density11_points[,3]
+)
+
+# Print the spplot object
+print(spplot_obj)
+
+# Add a title
+grid.text("Kernel Density Estimates: Flooding Nigeria, 2018", x = 0.5, y = 0.98, gp = gpar(fontsize = 15))
+```
+
+J.3 Merge KDE and DHS
+```{r}
+# Rename variable before merging
+names(df_flood18)[names(df_flood18) == "Longitude"] <- "LONGNUM"
+names(df_flood18)[names(df_flood18) == "Latitude"] <- "LATNUM"
+names(df_flood18)[names(df_flood18) == "Density1"] <- "flood_kde_1"
+names(df_flood18)[names(df_flood18) == "Density11"] <- "flood_kde_11"
+
+# Merge at the cluster level (geo-codes are defined at the cluster level)
+dhs_flood <- merge(dhs_df, df_flood18, by = c("LATNUM", "LONGNUM"))
+
+# Convert datasets to sf objects
+library(sf)
+dataset1_sf <- st_as_sf(dhs_df, coords = c("LONGNUM", "LATNUM"))
+dataset2_sf <- st_as_sf(df_flood18, coords = c("LONGNUM", "LATNUM"))
+
+# Perform a spatial join based on proximity, only include matched observations
+dhs_flood <- st_join(dataset1_sf, dataset2_sf, join = st_nearest_feature, left = FALSE, dist = 100)  # Adjust the distance threshold as needed
+
+# Check the number of approximate matches
+num_approx_matches <- nrow(dhs_flood)
+print(dhs_flood)
+```
+
+J.4A Descriptive Statistics
+```{r}
+library(stargazer)
+library(dplyr)
+
+# Create the new variable "rural"
+dhs_flood$rural <- ifelse(dhs_flood$URBAN_RURA == "R", 1, 0)
+
+# Create the new variable "female"
+dhs_flood$female <- ifelse(dhs_flood$sex == "Female", 1, 0)
+
+# Create a subset for only hosehold located in flooded areas
+dhs_flood <- subset(dhs_flood, flood_kde_11 != 0)
+
+# Subset
+flood_yes <- dhs_flood[dhs_flood$flood_kde_1>0, ]
+flood_no <- dhs_flood[dhs_flood$flood_kde_1==0, ]
+
+flood_yes <- flood_yes[c("deprived_sev", "deprived_mod", "age", "rural", "female", "wealth")]
+flood_no <- flood_no[c("deprived_sev", "deprived_mod", "age", "rural", "female", "wealth")]
+
+flood_yes$geometry <- NULL
+flood_no$geometry <- NULL
+
+# Compute descriptive stats
+mean_df_r <- sapply(flood_yes, mean)
+sd_df_r <- sapply(flood_yes, sd)
+obs_df_r <- sapply(flood_yes, function(x) sum(!is.na(x)))
+
+mean_df_u <- sapply(flood_no, mean)
+sd_df_u <- sapply(flood_no, sd)
+obs_df_u <- sapply(flood_no, function(x) sum(!is.na(x)))
+
+stargazer(as.data.frame(flood_yes), 
+          type = "text", 
+          title="Flooding Area (KDE, 1X1): Yes", 
+          digits=2, 
+          out="desc_stats_flood_yes.txt")
+
+stargazer(as.data.frame(flood_no), 
+          type = "text", 
+          title="Flooding Area (KDE, 1X1): No", 
+          digits=2, 
+          out="desc_stats_flood_no.txt")
+
+```
+
+J.4B Descriptive Statistics
+```{r}
+# Compute descriptive stats
+# Calculate the number of observations
+n_obs_flood_yes <- nrow(flood_yes)
+n_obs_flood_no <- nrow(flood_no)
+
+# Make a vector of the number of observations for each variable (all the same for each group)
+n_obs_flood_yes_vec <- rep(n_obs_flood_yes, ncol(flood_yes))
+n_obs_flood_no_vec <- rep(n_obs_flood_no, ncol(flood_no))
+
+# Combine the means, standard deviations, p-values, and number of observations
+summary_table <- data.frame(
+  Variable = colnames(flood_yes),
+  Mean_Flood_Yes = mean_df_r,
+  SD_Flood_Yes = sd_df_r,
+  Mean_Flood_No = mean_df_u,
+  SD_Flood_No = sd_df_u,
+  N_Obs_Flood_Yes = n_obs_flood_yes_vec,
+  N_Obs_Flood_No = n_obs_flood_no_vec,
+  P_Value = pvalues
+)
+
+# Print the summary table to the console
+print(summary_table)
+
+# Save the summary table to a CSV file
+write.csv(summary_table, "summary_statistics.csv")
+```
+
+J.5 Regression Analysis
+```{r}
+# Load the packages
+library(stargazer)
+library(broom)
+
+# A. Perform the logistic regression on severe poverty
+logit_m1 <- glm(deprived_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_m2 <- glm(deprived_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_e1 <- glm(dep_education_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_e2 <- glm(dep_education_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_he1 <- glm(dep_health_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_he2 <- glm(dep_health_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_ho1 <- glm(dep_housing_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_ho2 <- glm(dep_housing_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_n1 <- glm(dep_nutrition_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_n2 <- glm(dep_nutrition_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_s1 <- glm(dep_sanitation_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_s2 <- glm(dep_sanitation_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_w1 <- glm(dep_water_sev ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_w2 <- glm(dep_water_sev ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+# Generate the table for the multidimentionally poor
+stargazer(logit_m1, logit_m2, 
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Severely Deprived (Poor)",
+          out="logit_floods_poor.txt",
+          apply.coef=exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the education deprivation models
+stargazer(logit_e1, logit_e2, 
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Education Deprivation",
+          out="logit_floods_education.txt",
+          apply.coef=exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the health deprivation models
+stargazer(logit_he1, logit_he2,
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Health Deprivation",
+          out="logit_floods_health.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the housing deprivation models
+stargazer(logit_ho1, logit_ho2, 
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Housing Deprivation",
+          out="logit_floods_housing.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the nutrition deprivation models
+stargazer(logit_n1, logit_n2, 
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Nutrition Deprivation",
+          out="logit_floods_nutrition.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the sanitation deprivation models
+stargazer(logit_s1, logit_s2, 
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Sanitation Deprivation",
+          out="logit_floods_sanitation.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the water deprivation models
+stargazer(logit_w1, logit_w2, 
+          title="Logistic Regression - Severe Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Water Deprivation",
+          out="logit_floods_water.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# B. Perform the logistic regression on moderate poverty
+logit_m1 <- glm(deprived_mod ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_m2 <- glm(deprived_mod ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_e1 <- glm(dep_education_mod ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_e2 <- glm(dep_education_mod ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_he1 <- glm(dep_health_mod ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_he2 <- glm(dep_health_mod ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_ho1 <- glm(dep_housing_mod ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_ho2 <- glm(dep_housing_mod ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_n1 <- glm(dep_nutrition_mod ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_n2 <- glm(dep_nutrition_mod ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_s1 <- glm(dep_sanitation_mod ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_s2 <- glm(dep_sanitation_mod ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+logit_w1 <- glm(dep_water_mod ~ flood_kde_1, data = dhs_flood, family = binomial)
+logit_w2 <- glm(dep_water_mod ~ flood_kde_1 + age + rural + female + wealth, data = dhs_flood, family = binomial)
+
+# Generate the table for the multidimentionally poor
+stargazer(logit_m1, logit_m2, 
+          title="Logistic Regression - Moderate Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Severely Deprived (Poor)",
+          out="logit_floods_poor_mod.txt",
+          apply.coef=exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the education deprivation models
+stargazer(logit_e1, logit_e2, 
+          title="Logistic Regression - Moderate Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Education Deprivation",
+          out="logit_floods_education_mod.txt",
+          apply.coef=exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the health deprivation models
+stargazer(logit_he1, logit_he2,
+          title="Logistic Regression - Moderate Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Health Deprivation",
+          out="logit_floods_health_mod.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the housing deprivation models
+stargazer(logit_ho1, logit_ho2, 
+          title="Logistic Regression - Moderate Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Housing Deprivation",
+          out="logit_floods_housing_mod.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the nutrition deprivation models
+stargazer(logit_n1, logit_n2, 
+          title="Logistic Regression - Moderate Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Nutrition Deprivation",
+          out="logit_floods_nutrition_mod.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the sanitation deprivation models
+stargazer(logit_s1, logit_s2, 
+          title="Logistic Regression - Moderate Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Sanitation Deprivation",
+          out="logit_floods_sanitation_mod.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+
+# Generate the table for the water deprivation models
+stargazer(logit_w1, logit_w2, 
+          title="Logistic Regression - Moderate Poverty", 
+          align=TRUE,
+          covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+          dep.var.labels="Water Deprivation",
+          out="logit_floods_water_mod.txt",
+          apply.coef = exp,
+          omit="Constant",
+          notes="Coefficients are exponentiated")
+```
+
+J.6 Propensity Score Matching
+```{r}
+library(stargazer)
+library(broom)
+library(Matching)
+library(dplyr)
+library(tidyverse)
+library(broom)
+
+# Create the new variable "rural"
+dhs_flood$rural <- ifelse(dhs_flood$URBAN_RURA == "R", 1, 0)
+
+# Create the new variable "female"
+dhs_flood$female <- ifelse(dhs_flood$sex == "Female", 1, 0)
+
+# Create a subset for only household located in flooded areas
+dhs_flood <- subset(dhs_flood, flood_kde_11 != 0)
+
+# flooding variable
+dhs_flood$flood <- ifelse(dhs_flood$flood_kde_1!=0,1,0)
+
+# Logistic regression to estimate propensity scores
+propensity_model <- glm(flood ~ age + rural + female + wealth, 
+                        data = dhs_flood, family = binomial)
+
+# Extract propensity scores
+dhs_flood$propensity_score <- predict(propensity_model, type = "response")
+
+# Perform matching based on propensity scores
+matched_data <- Match(
+  Y = dhs_flood$deprived_sev,
+  Tr = dhs_flood$flood,
+  X = dhs_flood$propensity_score
+)
+
+# Extract the matched dataset
+matched_dhs_flood <- dhs_flood[unlist(matched_data[c("index.treated", "index.control")]), ]
+
+# List of outcomes
+outcomes <- c("deprived_sev", 
+              "dep_education_sev", 
+              "dep_health_sev", 
+              "dep_housing_sev",
+              "dep_nutrition_sev", 
+              "dep_sanitation_sev", 
+              "dep_water_sev")
+
+# Create a named list that maps each outcome variable to a descriptive label
+outcome_labels <- c(
+  deprived_sev = "Severely Deprived",
+  dep_education_sev = "Deprived in Education",
+  dep_health_sev = "Deprived in Health",
+  dep_housing_sev = "Deprived in Housing",
+  dep_nutrition_sev = "Deprived in Nutrition",
+  dep_sanitation_sev = "Deprived in Sanitation",
+  dep_water_sev = "Deprived in Water"
+)
+
+# Loop through outcomes and perform logistic regression
+for (outcome in outcomes) {
+  
+  # Define the formula for the logistic regression
+  formula_m1 <- as.formula(paste(outcome, "~ flood"))
+  formula_m2 <- as.formula(paste(outcome, "~ flood + age + rural + female + wealth"))
+  
+  # Perform the logistic regression for each model
+  logit_m1_matched <- glm(formula_m1, data = matched_dhs_flood, family = binomial)
+  logit_m2_matched <- glm(formula_m2, data = matched_dhs_flood, family = binomial)
+  
+  # Fetch the appropriate label for the current outcome
+  current_label <- outcome_labels[outcome]
+  
+  # Generate the table for the current outcome (matched data)
+  stargazer(logit_m1_matched, logit_m2_matched, 
+            title=paste("Logistic Regression -", outcome, "(Matched Data)"), 
+            align=TRUE,
+            covariate.labels=c("Flood KDE", "Age", "Rural", "Female", "Wealth"),
+            dep.var.labels=current_label, # Use the fetched label
+            out=paste("logit_floods_", outcome, "_matched.txt", sep=""),
+            apply.coef=exp,
+            omit="Constant",
+            notes="Coefficients are exponentiated")
+}
+
+```
+
+J.7 Balance Check - PSM
+```{r}
+library(writexl)
+
+# Function to calculate mean, SD, N, and p-value for SMD
+get_balance_statistics <- function(data, treatment_var, covariates) {
+  treated <- data[data[[treatment_var]] == 1, ]
+  control <- data[data[[treatment_var]] == 0, ]
+  
+  means_treated <- sapply(covariates, function(var) mean(treated[[var]], na.rm = TRUE))
+  means_control <- sapply(covariates, function(var) mean(control[[var]], na.rm = TRUE))
+  
+  sd_treated <- sapply(covariates, function(var) sd(treated[[var]], na.rm = TRUE))
+  sd_control <- sapply(covariates, function(var) sd(control[[var]], na.rm = TRUE))
+  
+  n_treated <- length(treated[[treatment_var]])
+  n_control <- length(control[[treatment_var]])
+  
+  sd_pooled <- sapply(covariates, function(var) sqrt(((n_treated - 1) * sd_treated[var] + 
+                                                      (n_control - 1) * sd_control[var]) / 
+                                                     (n_treated + n_control - 2)))
+  
+  SMD <- (means_treated - means_control) / sd_pooled
+  
+  # Calculate the p-value for SMD using Z-test
+  Z <- SMD / sqrt(2/n_treated) # Assuming equal sample size for treated and control for simplicity
+  p_value <- 2 * (1 - pnorm(abs(Z)))
+  
+  return(data.frame(Covariate = covariates,
+                    Mean_Treated = means_treated, SD_Treated = sd_treated, N_Treated = n_treated,
+                    Mean_Control = means_control, SD_Control = sd_control, N_Control = n_control,
+                    SMD = SMD, P_Value = p_value))
+}
+
+# Calculate balance statistics for unmatched data
+balance_unmatched <- get_balance_statistics(dhs_flood, "flood", covariates)
+
+# Calculate balance statistics for matched data
+balance_matched <- get_balance_statistics(matched_dhs_flood, "flood", covariates)
+
+# Combine both tables for easy comparison
+combined_balance <- rbind(cbind(balance_unmatched, Dataset = "Unmatched"),
+                         cbind(balance_matched, Dataset = "Matched"))
+
+combined_balance
+
+write_xlsx(combined_balance, "balance_statistics.xlsx")
+```
+
