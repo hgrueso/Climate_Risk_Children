@@ -5,7 +5,7 @@ Output: climate_children
 ---
 
 Creation: 09/05/2023
-Update: 18/08/2023
+Update: 24/08/2023
 Data Sources: 
 1) Flood maps from Nigeria: https://global-flood-database.cloudtostreet.ai/
 2) DHS:
@@ -32,6 +32,7 @@ if(!requireNamespace("stargazer")) install.packages( "stargazer" )
 if(!requireNamespace("Matching")) install.packages( "Matching" )
 if(!requireNamespace("rgenoud")) install.packages( "rgenoud" )
 if(!requireNamespace("writexl")) install.packages( "writexl" )
+if(!requireNamespace("rnaturalearth")) install.packages( "rnaturalearth" )
 
 ```
 
@@ -229,7 +230,7 @@ points(dhs_poor_mod$LONGNUM, dhs_poor_mod$LATNUM, col = "yellow", pch = 20)
 
 ```
 
-I.1 Map of Poverty Severity at the Cluster Level
+I.1A Map of Poverty Severity at the Cluster Level
 ```{r}
 library(raster)
 library(ggplot2)
@@ -255,6 +256,57 @@ colors <- alpha(color_func(100)[color_indices], 0.7)
 
 # Add the clusters' locations to the plot with small size and red color
 points(dhs_df$LONGNUM, dhs_df$LATNUM, col = colors, pch = 20, cex = 0.5)
+
+```
+
+I.1B Map of Poverty Severity at the Cluster Level
+```{r}
+# Required libraries
+library(raster)
+library(ggplot2)
+library(scales)
+library(RColorBrewer)
+library(rnaturalearth)
+
+# Load the Nigeria shapefile
+nigeria <- ne_countries(scale = "medium", returnclass = "sf", country = "Nigeria")
+
+# Define desired extent values
+min_longitude <- 0
+max_longitude <- 17
+min_latitude <- 0
+max_latitude <- 17
+
+# Color palette for the raster data
+color_blend_func <- colorRampPalette(colors = c("green", brewer.pal(9, "RdYlBu")))
+
+# Create a color palette for the points
+color_func <- colorRampPalette(colors = c("red", "red"))
+color_indices <- round(dhs_df$deprived_sev * 100)
+color_indices[color_indices > 100] <- 100
+color_indices[color_indices < 1] <- 1
+colors <- alpha(color_func(100)[color_indices], 0.7)
+
+# Create the plot using ggplot2
+ggplot() +
+  geom_raster(data = as.data.frame(raster_layer, xy = TRUE), aes(x = x, y = y, fill = flooded), interpolate = TRUE) +
+  scale_fill_gradientn(colors = color_blend_func(256), na.value = "white") +
+  geom_sf(data = nigeria, fill = NA, color = "black") +  # Nigeria's border
+  geom_point(data = dhs_df, aes(x = LONGNUM, y = LATNUM, color = deprived_sev), size = 0.5, alpha = 0.7) +
+  scale_color_gradientn(colors = color_func(100)) +
+  coord_sf(xlim = c(min_longitude, max_longitude), ylim = c(min_latitude, max_latitude), expand = FALSE) +
+  labs(
+    title = 'Flood Map: Nigeria, 2018 with Cluster Poverty Severity',
+    x = "Longitude",  # Label for x-axis
+    y = "Latitude"    # Label for y-axis
+  ) +
+  theme_minimal() +
+  theme(
+    panel.background = element_rect(fill = "white"),
+    plot.background = element_rect(fill = "white"),
+    panel.grid = element_blank()
+  ) +
+  guides(color = FALSE)  # Hide the color legend for poverty
 
 ```
 
