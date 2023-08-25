@@ -82,7 +82,7 @@ E. Plot Nigeria flooding map
 ```{r}
 # Plot the raster map with custom settings
 plot(raster_layer,
-     main = "Foold Map: Nigeria, 2018",
+     main = "Flood Map: Nigeria, 2018",
      legend = TRUE,
      legend.args = list(text = "Flooding"))
 ```
