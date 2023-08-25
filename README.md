@@ -11,7 +11,7 @@ Data files: Microdata_DHS_Apr2023, dhsgps_combined_sep22.csv, only the flooding 
 5) Add LSMS data and study the effect of receiving cash transfers among those affected by flooding. Only select individuals affected by the flood and compare differences between those who got the cash transfers and those who didn't.
 
 # Code Outputs:
-![image](https://github.com/hgrueso/Climate_Risk_Children/assets/51755133/7f7c917d-4618-43b0-b634-634a5d3ebb6f)
+![image](https://github.com/hgrueso/Climate_Risk_Children/assets/51755133/9bd1a743-1117-4276-a82e-00a75d6c367a)
 ![image](https://github.com/hgrueso/Climate_Risk_Children/assets/51755133/88781269-e65e-443e-ae72-a152967ee0c7)
 ![image](https://github.com/hgrueso/Climate_Risk_Children/assets/51755133/c51eeba2-e455-4002-a8c5-1c8ce4ae5d91)
 ![image](https://github.com/hgrueso/Climate_Risk_Children/assets/51755133/4c858bfa-5a44-4060-9a85-cd4b12b2f9a2)
